@@ -1,0 +1,58 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Wallet and Send Transaction with ethers.js</title>
+    <script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+<script>
+    console.log("Ethers.js проверка:", typeof ethers !== "undefined" ? "Загружен" : "НЕ загружен");
+</script>
+
+<button onclick="connectWallet()">Connect MetaMask</button>
+<p id="accountAddress"></p>
+<input type="text" id="messageInput" placeholder="Enter a new message">
+<button onclick="sendMessage()">Send Message</button>
+<h3>Message History:</h3>
+<ul id="messageList"></ul>
+
+<script>
+    let provider, signer, contract;
+    const contractAddress = "0x670aC891172b4270ca9943be12aa6eF1a58A7f7c";
+    const abi = [
+        "function storeMessage(string memory _content) public",
+        "function getMessages(address user) public view returns (tuple(string content, address sender, uint256 timestamp)[])"
+    ];
+
+    async function connectWallet() {
+        if (window.ethereum) {
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            await window.ethereum.request({method: "eth_requestAccounts"});
+            signer = provider.getSigner();
+            contract = new ethers.Contract(contractAddress, abi, signer);
+            document.getElementById("accountAddress").innerText = await signer.getAddress();
+            loadMessages();
+        }
+    }
+
+    async function sendMessage() {
+        const message = document.getElementById("messageInput").value;
+        await contract.storeMessage(message);
+        loadMessages();
+    }
+
+    async function loadMessages() {
+        const userAddress = await signer.getAddress();
+        const messages = await contract.getMessages(userAddress);
+        const messageList = document.getElementById("messageList");
+        messageList.innerHTML = "";
+        messages.forEach(msg => {
+            const li = document.createElement("li");
+            li.textContent = `${new Date(msg.timestamp * 1000).toLocaleString()}: ${msg.content}`;
+            messageList.appendChild(li);
+        });
+    }
+</script>
+</body>
+</html>
